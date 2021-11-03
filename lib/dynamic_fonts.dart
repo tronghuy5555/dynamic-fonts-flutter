@@ -75,9 +75,10 @@ class DynamicFonts {
   static Map<String, TextThemeBuilder> _asMapOfTextThemes() =>
       Map.unmodifiable(_themeMap);
 
-  static void register(String familyName,
-      Map<DynamicFontsVariant, DynamicFontsFile> variantMap) {
-    final style = styleBuilder(familyName, variantMap);
+  static void register(
+      String familyName, Map<DynamicFontsVariant, DynamicFontsFile> variantMap,
+      {bool eager = false}) {
+    final style = styleBuilder(familyName, variantMap, eager);
     _styleMap[familyName] = style;
     _themeMap[familyName] = themeBuilder(style);
   }
@@ -180,6 +181,7 @@ class DynamicFonts {
   static TextStyleBuilder styleBuilder(
     String fontFamily,
     Map<DynamicFontsVariant, DynamicFontsFile> variantMap,
+    bool eager,
   ) =>
       ({
         textStyle,
@@ -224,6 +226,7 @@ class DynamicFonts {
             decorationStyle: decorationStyle,
             decorationThickness: decorationThickness,
             fonts: variantMap,
+            eager: eager,
           );
 }
 
