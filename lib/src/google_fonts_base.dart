@@ -2,13 +2,20 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-import 'dart:typed_data';
 import 'dart:ui';
 
 import 'package:crypto/crypto.dart';
-import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
+// TODO(andrewkolos): The flutter framework wishes to add a new class named
+// `AssetManifest` to its API (see https://github.com/flutter/flutter/pull/119277).
+// However, doing so would break integration tests that utilize google_fonts due
+// to name collision with the `AssetManifest` class that this package already
+// defines (see https://github.com/flutter/flutter/pull/119273).
+// Once the AssetManifest API is added to flutter, update this package to use it
+// instead of the AssetManifest class this package defines and remove this `hide`
+// and the ignore annotation.
+// ignore: undefined_hidden_name
+import 'package:flutter/services.dart' hide AssetManifest;
 import 'package:http/http.dart' as http;
 
 import '../dynamic_fonts.dart';
@@ -20,20 +27,25 @@ import 'google_fonts_descriptor.dart';
 import 'google_fonts_family_with_variant.dart';
 import 'google_fonts_variant.dart';
 
-// Keep track of the fonts that are loaded or currently loading in FontLoader
-// for the life of the app instance. Once a font is attempted to load, it does
-// not need to be attempted to load again, unless the attempted load resulted
-// in an error.
+/// Set of fonts that are loading or loaded.
+///
+/// Used to determine whether to load a font or not.
 final Set<String> _loadedFonts = {};
+
+@visibleForTesting
+void clearCache() => _loadedFonts.clear();
+
+/// Set of [Future]s corresponding to fonts that are loading.
+///
+/// When a font is loading, a future is added to this set. When it is loaded in
+/// the [FontLoader], that future is removed from this set.
+final Set<Future<void>> pendingFontFutures = {};
 
 @visibleForTesting
 http.Client httpClient = http.Client();
 
 @visibleForTesting
 AssetManifest assetManifest = AssetManifest();
-
-@visibleForTesting
-void clearCache() => _loadedFonts.clear();
 
 /// Creates a [TextStyle] that either uses the [fontFamily] for the requested
 /// GoogleFont, or falls back to the pre-bundled [fontFamily].
@@ -63,7 +75,7 @@ TextStyle googleFontsTextStyle({
   double? decorationThickness,
   required Map<GoogleFontsVariant, GoogleFontsFile> fonts,
 }) {
-  textStyle ??= TextStyle();
+  textStyle ??= const TextStyle();
   textStyle = textStyle.copyWith(
     color: color,
     backgroundColor: backgroundColor,
@@ -100,7 +112,9 @@ TextStyle googleFontsTextStyle({
     file: fonts[matchedVariant]!,
   );
 
-  loadFontIfNecessary(descriptor);
+  final loadingFuture = loadFontIfNecessary(descriptor);
+  pendingFontFutures.add(loadingFuture);
+  loadingFuture.then((_) => pendingFontFutures.remove(loadingFuture));
 
   return textStyle.copyWith(
     fontFamily: familyWithVariant.toString(),
@@ -116,11 +130,12 @@ TextStyle googleFontsTextStyle({
 ///
 /// Otherwise, this method will first check to see if the font is available
 /// as an asset, then on the device file system. If it isn't, it is fetched via
-/// the [fontUrl] and stored on device. In all cases, the font is loaded into
-/// the [FontLoader].
+/// the [fontUrl] and stored on device. In all cases, the returned future
+/// completes once the font is loaded into the [FontLoader].
 Future<void> loadFontIfNecessary(GoogleFontsDescriptor descriptor) async {
   final familyWithVariantString = descriptor.familyWithVariant.toString();
   final fontName = descriptor.familyWithVariant.toApiFilenamePrefix();
+  final fileHash = descriptor.file.expectedFileHash;
   // If this font has already already loaded or is loading, then there is no
   // need to attempt to load it again, unless the attempted load results in an
   // error.
@@ -147,7 +162,10 @@ Future<void> loadFontIfNecessary(GoogleFontsDescriptor descriptor) async {
     }
 
     // Check if this font can be loaded from the device file system.
-    byteData = file_io.loadFontFromDeviceFileSystem(familyWithVariantString);
+    byteData = file_io.loadFontFromDeviceFileSystem(
+      name: familyWithVariantString,
+      fileHash: fileHash,
+    );
 
     if (await byteData != null) {
       return loadFontByteData(familyWithVariantString, byteData);
@@ -164,15 +182,27 @@ Future<void> loadFontIfNecessary(GoogleFontsDescriptor descriptor) async {
       }
     } else {
       throw Exception(
-        "GoogleFonts.config.allowRuntimeFetching is false but font $fontName was not "
-        "found in the application assets. Ensure $fontName.otf exists in a "
+        'GoogleFonts.config.allowRuntimeFetching is false but font $fontName was not '
+        'found in the application assets. Ensure $fontName.ttf exists in a '
         "folder that is included in your pubspec's assets.",
       );
     }
   } catch (e) {
     _loadedFonts.remove(familyWithVariantString);
-    print('Error: google_fonts was unable to load font $fontName because the '
-        'following exception occured:\n$e');
+    print('Error: dynamic_fonts was unable to load font $fontName because the '
+        'following exception occurred:\n$e');
+    if (file_io.isTest) {
+      // print('\nThere is likely something wrong with your test. Please see '
+      //     'https://github.com/material-foundation/flutter-packages/blob/main/packages/google_fonts/example/test '
+      //     'for examples of how to test with google_fonts.');
+    } else if (file_io.isMacOS || file_io.isAndroid) {
+      print(
+        '\nSee https://docs.flutter.dev/development/data-and-backend/networking#platform-notes.',
+      );
+    }
+    // print('If troubleshooting doesn\'t solve the problem, please file an issue '
+    //     'at https://github.com/material-foundation/flutter-packages/issues/new/choose.\n');
+    rethrow;
   }
 }
 
@@ -230,7 +260,7 @@ Future<ByteData> _httpFetchFontAndSaveToDevice(
   try {
     response = await httpClient.get(uri);
   } catch (e) {
-    throw Exception('Failed to load font with url: ${file.url}');
+    throw Exception('Failed to load font with url ${file.url}: $e');
   }
   if (response.statusCode == 200) {
     if (!_isFileSecure(file, response.bodyBytes)) {
@@ -239,8 +269,11 @@ Future<ByteData> _httpFetchFontAndSaveToDevice(
       );
     }
 
-    _unawaited(
-        file_io.saveFontToDeviceFileSystem(fontName, response.bodyBytes));
+    _unawaited(file_io.saveFontToDeviceFileSystem(
+      name: fontName,
+      fileHash: file.expectedFileHash,
+      bytes: response.bodyBytes,
+    ));
 
     return ByteData.view(response.bodyBytes.buffer);
   } else {

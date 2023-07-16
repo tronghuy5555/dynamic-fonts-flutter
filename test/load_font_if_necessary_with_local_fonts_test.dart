@@ -1,6 +1,5 @@
 import 'dart:convert';
 import 'dart:io';
-import 'dart:typed_data';
 
 import 'package:dynamic_fonts/dynamic_fonts.dart';
 import 'package:dynamic_fonts/src/google_fonts_base.dart';
@@ -8,15 +7,31 @@ import 'package:dynamic_fonts/src/google_fonts_descriptor.dart';
 import 'package:dynamic_fonts/src/google_fonts_family_with_variant.dart';
 import 'package:dynamic_fonts/src/google_fonts_variant.dart';
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
+// ignore: undefined_hidden_name
+import 'package:flutter/services.dart' hide AssetManifest;
 import 'package:flutter_test/flutter_test.dart';
 import 'package:http/http.dart' as http;
 import 'package:mockito/mockito.dart';
+import 'package:path_provider_platform_interface/path_provider_platform_interface.dart';
+import 'package:plugin_platform_interface/plugin_platform_interface.dart';
 
 class MockHttpClient extends Mock implements http.Client {
   Future<http.Response> gets(dynamic uri, {dynamic headers}) {
     super.noSuchMethod(Invocation.method(#get, [uri], {#headers: headers}));
     return Future.value(http.Response('', 200));
+  }
+}
+
+class FakePathProviderPlatform extends Fake
+    with MockPlatformInterfaceMixin
+    implements PathProviderPlatform {
+  FakePathProviderPlatform(this._applicationSupportPath);
+
+  final String _applicationSupportPath;
+
+  @override
+  Future<String?> getApplicationSupportPath() async {
+    return _applicationSupportPath;
   }
 }
 
@@ -36,18 +51,21 @@ final _fakeResponseFile = GoogleFontsFile(
 // handler (flutter/assets), that can not be undone, no other tests should be
 // written in this file.
 void main() {
-  late MockHttpClient _httpClient;
+  TestWidgetsFlutterBinding.ensureInitialized();
+
+  late Directory directory;
+  late MockHttpClient mockHttpClient;
 
   setUp(() async {
-    _httpClient = MockHttpClient();
-    httpClient = _httpClient;
+    mockHttpClient = MockHttpClient();
+    httpClient = mockHttpClient;
     DynamicFonts.config.allowRuntimeFetching = true;
-    when(_httpClient.gets(any)).thenAnswer((_) async {
+    when(mockHttpClient.gets(any)).thenAnswer((_) async {
       return http.Response(_fakeResponse, 200);
     });
 
     // Add Foo-BlackItalic to mock asset bundle.
-    ServicesBinding.instance!.defaultBinaryMessenger
+    TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
         .setMockMessageHandler('flutter/assets', (message) {
       final Uint8List encoded =
           utf8.encoder.convert('{"google_fonts/Foo-BlackItalic.ttf":'
@@ -55,23 +73,17 @@ void main() {
       return Future.value(encoded.buffer.asByteData());
     });
 
-    // The following snippet pulled from
-    //  * https://flutter.dev/docs/cookbook/persistence/reading-writing-files#testing
-    final directory = await Directory.systemTemp.createTemp();
-    const MethodChannel('plugins.flutter.io/path_provider')
-        .setMockMethodCallHandler((methodCall) async {
-      if (methodCall.method == 'getApplicationSupportDirectory') {
-        return directory.path;
-      }
-      return null;
-    });
+    directory = await Directory.systemTemp.createTemp();
+    PathProviderPlatform.instance = FakePathProviderPlatform(directory.path);
   });
 
-  testWidgets(
+  tearDown(() {});
+
+  test(
       'loadFontIfNecessary method does nothing if the font is in the '
-      'Asset Manifest', (tester) async {
+      'Asset Manifest', () async {
     final descriptorInAssets = GoogleFontsDescriptor(
-      familyWithVariant: GoogleFontsFamilyWithVariant(
+      familyWithVariant: const GoogleFontsFamilyWithVariant(
         family: 'Foo',
         googleFontsVariant: GoogleFontsVariant(
           fontWeight: FontWeight.w900,
@@ -84,10 +96,10 @@ void main() {
     // Call loadFontIfNecessary and verify no http request happens because
     // Foo-BlackItalic is in the asset bundle.
     await loadFontIfNecessary(descriptorInAssets);
-    verifyNever(_httpClient.gets(anything));
+    verifyNever(mockHttpClient.gets(anything));
 
     final descriptorNotInAssets = GoogleFontsDescriptor(
-      familyWithVariant: GoogleFontsFamilyWithVariant(
+      familyWithVariant: const GoogleFontsFamilyWithVariant(
         family: 'Bar',
         googleFontsVariant: GoogleFontsVariant(
           fontWeight: FontWeight.w700,
@@ -100,6 +112,6 @@ void main() {
     // Call loadFontIfNecessary and verify that an http request happens because
     // Bar-BoldItalic is not in the asset bundle.
     await loadFontIfNecessary(descriptorNotInAssets);
-    verify(_httpClient.gets(anything)).called(1);
+    verify(mockHttpClient.gets(anything)).called(1);
   });
 }

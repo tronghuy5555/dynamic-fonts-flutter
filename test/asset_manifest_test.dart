@@ -3,11 +3,11 @@
 // found in the LICENSE file.
 
 import 'dart:convert';
-import 'dart:typed_data';
 
-import 'package:flutter/services.dart';
-import 'package:flutter_test/flutter_test.dart';
 import 'package:dynamic_fonts/src/asset_manifest.dart';
+// ignore: undefined_hidden_name
+import 'package:flutter/services.dart' hide AssetManifest;
+import 'package:flutter_test/flutter_test.dart';
 
 const _fakeAssetManifestText = '{"value": ["fake"]}';
 var _assetManifestLoadCount = 0;
@@ -16,7 +16,7 @@ late AssetManifest assetManifest;
 
 void main() {
   setUpAll(() async {
-    ServicesBinding.instance!.defaultBinaryMessenger
+    TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
         .setMockMessageHandler('flutter/assets', (message) {
       _assetManifestLoadCount++;
       final Uint8List encoded = utf8.encoder.convert(_fakeAssetManifestText);

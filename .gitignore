@@ -30,8 +30,7 @@ example/.flutter-plugins-dependencies
 .packages
 .pub-cache/
 .pub/
-pubspec.lock
-/build/
+build/
 
 # Android related
 **/android/**/gradle-wrapper.jar

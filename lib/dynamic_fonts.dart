@@ -55,6 +55,9 @@ class DynamicFonts {
   /// ```
   static final config = _Config();
 
+  static Future<List<void>> pendingFonts([List<dynamic>? _]) =>
+      Future.wait(pendingFontFutures);
+
   static final Map<String, TextStyleBuilder> _styleMap = {};
 
   /// Get a map of all available fonts.
