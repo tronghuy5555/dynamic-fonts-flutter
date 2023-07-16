@@ -32,16 +32,12 @@ jobs:
 
       - name: Get packages
         run: flutter pub get
-        working-directory: ${{ matrix.package }}
 
       - name: Analyze Dart code
         run: flutter analyze
-        working-directory: ${{ matrix.package }}
 
       - name: Ensure Dart code is formatted correctly
         run: dart format --set-exit-if-changed .
-        working-directory: ${{ matrix.package }}
 
       - name: Run Flutter unit tests
         run: flutter test
-        working-directory: ${{ matrix.package }}
