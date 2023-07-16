@@ -8,10 +8,6 @@
 * Bump minimum SDK version to 2.14
 * Fix incompatibility with Flutter 3.13+
 
-## [2.1.0] - 2021-05-14
-
-* Added the latest fonts from fonts.google.com.
-
 ## [2.0.0] - 2021-02-26
 
 * [google_fonts] Migrated the main library to null safety.
