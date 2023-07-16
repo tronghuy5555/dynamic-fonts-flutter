@@ -66,7 +66,7 @@ class DynamicFonts {
   /// is the corresponding [DynamicFonts] method.
   static Map<String, TextStyleBuilder> asMap() => Map.unmodifiable(_styleMap);
 
-  static Map<String, TextThemeBuilder> _themeMap = {};
+  static final Map<String, TextThemeBuilder> _themeMap = {};
 
   /// Get a map of all available fonts and their associated text themes.
   ///
@@ -161,19 +161,19 @@ class DynamicFonts {
       ([textTheme]) {
         textTheme ??= ThemeData.light().textTheme;
         return TextTheme(
-          headline1: styleBuilder(textStyle: textTheme.headline1),
-          headline2: styleBuilder(textStyle: textTheme.headline2),
-          headline3: styleBuilder(textStyle: textTheme.headline3),
-          headline4: styleBuilder(textStyle: textTheme.headline4),
-          headline5: styleBuilder(textStyle: textTheme.headline5),
-          headline6: styleBuilder(textStyle: textTheme.headline6),
-          subtitle1: styleBuilder(textStyle: textTheme.subtitle1),
-          subtitle2: styleBuilder(textStyle: textTheme.subtitle2),
-          bodyText1: styleBuilder(textStyle: textTheme.bodyText1),
-          bodyText2: styleBuilder(textStyle: textTheme.bodyText2),
-          caption: styleBuilder(textStyle: textTheme.caption),
-          button: styleBuilder(textStyle: textTheme.button),
-          overline: styleBuilder(textStyle: textTheme.overline),
+          displayLarge: styleBuilder(textStyle: textTheme.displayLarge),
+          displayMedium: styleBuilder(textStyle: textTheme.displayMedium),
+          displaySmall: styleBuilder(textStyle: textTheme.displaySmall),
+          headlineMedium: styleBuilder(textStyle: textTheme.headlineMedium),
+          headlineSmall: styleBuilder(textStyle: textTheme.headlineSmall),
+          titleLarge: styleBuilder(textStyle: textTheme.titleLarge),
+          titleMedium: styleBuilder(textStyle: textTheme.titleMedium),
+          titleSmall: styleBuilder(textStyle: textTheme.titleSmall),
+          bodyLarge: styleBuilder(textStyle: textTheme.bodyLarge),
+          bodyMedium: styleBuilder(textStyle: textTheme.bodyMedium),
+          bodySmall: styleBuilder(textStyle: textTheme.bodySmall),
+          labelLarge: styleBuilder(textStyle: textTheme.labelLarge),
+          labelSmall: styleBuilder(textStyle: textTheme.labelSmall),
         );
       };
 
@@ -260,5 +260,6 @@ abstract class DynamicFontsFile extends GoogleFontsFile {
   DynamicFontsFile(String expectedFileHash, int expectedLength)
       : super(expectedFileHash, expectedLength);
 
+  @override
   String get url;
 }
