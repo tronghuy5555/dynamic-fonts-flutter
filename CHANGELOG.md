@@ -1,3 +1,13 @@
+## [2.2.0] - 2023-07-16
+
+* Optionally eagerly load an entire font family at registration time by passing
+  `eager: true` to `DynamicFonts.register`. This solves the [synthetic variant
+  problem](https://github.com/material-foundation/flutter-packages/issues/35#issuecomment-959043020)
+  inherent in google_fonts at the cost of potentially much longer loading time.
+* Synchronize code with google_fonts 5.1.0
+* Bump minimum SDK version to 2.14
+* Fix incompatibility with Flutter 3.13+
+
 ## [2.1.0] - 2021-05-14
 
 * Added the latest fonts from fonts.google.com.
