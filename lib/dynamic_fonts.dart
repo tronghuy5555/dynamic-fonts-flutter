@@ -203,31 +203,33 @@ class DynamicFonts {
         decorationColor,
         decorationStyle,
         decorationThickness,
-      }) =>
-          googleFontsTextStyle(
-            textStyle: textStyle,
-            fontFamily: fontFamily,
-            color: color,
-            backgroundColor: backgroundColor,
-            fontSize: fontSize,
-            fontWeight: fontWeight,
-            fontStyle: fontStyle,
-            letterSpacing: letterSpacing,
-            wordSpacing: wordSpacing,
-            textBaseline: textBaseline,
-            height: height,
-            locale: locale,
-            foreground: foreground,
-            background: background,
-            shadows: shadows,
-            fontFeatures: fontFeatures,
-            decoration: decoration,
-            decorationColor: decorationColor,
-            decorationStyle: decorationStyle,
-            decorationThickness: decorationThickness,
-            fonts: variantMap,
-            eager: eager,
-          );
+      }) {
+        assert(variantMap.isNotEmpty, 'variantMap must not be empty.');
+        return googleFontsTextStyle(
+          textStyle: textStyle,
+          fontFamily: fontFamily,
+          color: color,
+          backgroundColor: backgroundColor,
+          fontSize: fontSize,
+          fontWeight: fontWeight,
+          fontStyle: fontStyle,
+          letterSpacing: letterSpacing,
+          wordSpacing: wordSpacing,
+          textBaseline: textBaseline,
+          height: height,
+          locale: locale,
+          foreground: foreground,
+          background: background,
+          shadows: shadows,
+          fontFeatures: fontFeatures,
+          decoration: decoration,
+          decorationColor: decorationColor,
+          decorationStyle: decorationStyle,
+          decorationThickness: decorationThickness,
+          fonts: variantMap,
+          eager: eager,
+        );
+      };
 }
 
 /// Represents a font variant in Flutter-specific types.
