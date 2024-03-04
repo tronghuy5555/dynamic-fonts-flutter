@@ -1,3 +1,8 @@
+## [2.2.1] - 2024-03-04
+
+* Validate the variantMap provided to `DynamicFonts.register` and
+  `DynamicFonts.styleBuilder`
+
 ## [2.2.0] - 2023-07-16
 
 * Optionally eagerly load an entire font family at registration time by passing
